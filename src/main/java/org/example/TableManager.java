@@ -12,6 +12,24 @@ public class TableManager {
         this.connection = connection;
     }
 
+    public int getAttributeIndex(String tableName, String attributeName) {
+        try {
+            String sql = "SELECT position FROM Attribute_metaData WHERE relational_name = ? AND attribute_name = ?";
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, tableName);
+                pstmt.setString(2, attributeName);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getInt("position") - 1;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1; // 속성을 찾지 못한 경우
+    }
+
     public void createTable(String tableName, String[] attributes) {
         // Relational_MetaData 테이블에 정보 저장
         String attributesList = String.join(",", attributes);

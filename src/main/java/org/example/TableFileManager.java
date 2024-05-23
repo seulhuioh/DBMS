@@ -3,7 +3,9 @@ package org.example;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class TableFileManager {
     private static final int RECORD_SIZE = 140;
@@ -19,7 +21,31 @@ public class TableFileManager {
         initializeFile();
         System.out.println("테이블 데이터 파일이 초기화 완료");
     }
+    public List<byte[]> readAllRecords() throws IOException {
+        List<byte[]> records = new ArrayList<>();
+        try (RandomAccessFile file = new RandomAccessFile(tableName, "r")) {
+            byte[] block = new byte[BLOCK_SIZE];
+            while (file.read(block) != -1) {
+                for (int offset = HEADER_SIZE; offset < BLOCK_SIZE; offset += RECORD_SIZE) {
+                    if (!isRecordEmptyg(block, offset)) {
+                        byte[] record = Arrays.copyOfRange(block, offset, offset + RECORD_SIZE);
+                        records.add(record);
+                    }
+                }
+            }
+        }
+        return records;
+    }
 
+    private boolean isRecordEmptyg(byte[] block, int offset) {
+        // 레코드가 비어 있는지 확인하는 로직
+        for (int i = offset; i < offset + RECORD_SIZE; i++) {
+            if (block[i] != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
     private void initializeFile() {
         try (RandomAccessFile file = new RandomAccessFile(tableName, "rw")) {
             if (file.length() == 0) {

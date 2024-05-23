@@ -23,6 +23,7 @@ public class Main {
         try (Connection conn = DriverManager.getConnection(url, user, password);
              Scanner scanner = new Scanner(System.in)) {
             TableManager tableManager = new TableManager(conn);
+            HashJoinManager hashJoinManager = new HashJoinManager(tableManager);
 
             while (true) {
                 System.out.println("인터페이스를 입력하세요. EX):");
@@ -58,6 +59,25 @@ public class Main {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void handleHashJoin(String input, HashJoinManager hashJoinManager) {
+        String[] parts = input.split("\"");
+        if (parts.length < 5) {
+            System.out.println("명령어 형식이 올바르지 않습니다. 예시: HASH JOIN \"tableR\" \"tableS\" ON \"attrR\" = \"attrS\"");
+            return;
+        }
+
+        String tableR = parts[1];
+        String tableS = parts[3];
+        String attrR = parts[5].split("=")[0].trim();
+        String attrS = parts[5].split("=")[1].trim();
+
+        try {
+            hashJoinManager.performHashJoin(tableR, tableS, attrR, attrS);
+        } catch (IOException e) {
+            System.err.println("해쉬 조인 중 오류 발생: " + e.getMessage());
         }
     }
     private static String extractPrimaryKey(String input) {
