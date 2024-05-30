@@ -7,7 +7,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Arrays;
 import java.util.Scanner;
-
+import java.sql.SQLException;
 
 
 public class Main {
@@ -26,15 +26,16 @@ public class Main {
             HashJoinManager hashJoinManager = new HashJoinManager(tableManager);
 
             while (true) {
-                System.out.println("인터페이스를 입력하세요. EX):");
                 System.out.println("테이블 생성: CREATE TABLE \"table_name\" (attr1, attr2, ...)");
                 System.out.println("레코드 삽입: INSERT VALUES (...); WHERE table=\"table_name\"");
                 System.out.println("레코드 삭제: DELETE VALUES (primaryKeyValue); WHERE table=\"table_name\"");
                 System.out.println("레코드 단일 조회: SELECT 1 FROM \"table_name\"");
                 System.out.println("레코드 전체 조회: SELECT * FROM \"table_name\"");
+                System.out.println("해쉬 조인: JOIN \"tableR\" \"tableS\" ON \"tableR\".\"attrR\" = \"tableS\".\"attrS\"");
                 System.out.println("종료: exit");
+                System.out.println("인터페이스를 입력하세요. EX):");
                 String input = scanner.nextLine(); // 사용자 입력 받기
-                String command = input.trim().toLowerCase();
+                String command = input.trim().toLowerCase();//앞뒤 공백을 제거, 모든 문자를 소문자로 변환
                 if (command.startsWith("create table")) {
                     // 테이블 생성 로직
                     handleCreateTable(input, tableManager);
@@ -50,10 +51,18 @@ public class Main {
                 } else if (command.startsWith("select * from")) {
                     // 전체 레코드 조회 로직
                     handleSelectAll(input);
-                } else if (input.toLowerCase().equals("exit")) {
+                }
+                else if (input.toLowerCase().equals("join")) {
+                    // 해쉬 조인 로직
+                    handleHashJoin(input, hashJoinManager);
+                }
+
+                else if (input.toLowerCase().equals("exit")) {
                     System.out.println("프로그램을 종료합니다.");
                     break;
-                } else {
+                }
+
+                else {
                     System.out.println("알 수 없는 명령어입니다. 다시 입력해주세요.");
                 }
             }
@@ -61,6 +70,7 @@ public class Main {
             e.printStackTrace();
         }
     }
+
 
     private static void handleHashJoin(String input, HashJoinManager hashJoinManager) {
         String[] parts = input.split("\"");
@@ -76,13 +86,13 @@ public class Main {
 
         try {
             hashJoinManager.performHashJoin(tableR, tableS, attrR, attrS);
-        } catch (IOException e) {
+        } catch (IOException | SQLException e) {
             System.err.println("해쉬 조인 중 오류 발생: " + e.getMessage());
         }
     }
     private static String extractPrimaryKey(String input) {
         // 'INSERT VALUES' 명령에서 첫 번째 값을 기본 키로 추출
-        // 예시: INSERT VALUES ('1', '김철수', '1990-01-01', ...);
+        // 예시: INSERT VALUES ('1', '김철수', '1990-01-01', ...);에서 '1' 추출
         String valuesPart = input.substring(input.indexOf("(") + 1, input.indexOf(")"));
         String[] values = valuesPart.split(",\\s*(?=['\"])");
         if (values.length > 0) {
@@ -129,45 +139,42 @@ public class Main {
     }
 
 
-    private static void handleCreateTable(String input, TableManager tableManager) {
+    private static void handleCreateTable(String input, TableManager tableManager)
+    {
+        //입력 예시
+        // CREATE TABLE "HumanINFO" ( `HumanID` ,`Name`,`Birth` ,`BankAccount`, `AddressID`, `Gender` , `PhoneNumber` )
         // 테이블 이름 추출
-        int firstQuoteIndex = input.indexOf("\"");
-        int secondQuoteIndex = input.indexOf("\"", firstQuoteIndex + 1);
-        if (firstQuoteIndex == -1 || secondQuoteIndex == -1) {
+        int firstQuoteIndex = input.indexOf("\"");// 따옴표의 인덱스(위치)를 반환
+        int secondQuoteIndex = input.indexOf("\"", firstQuoteIndex + 1);// firstQuoteIndex + 1 위치부터 두 번째 (") 인덱스
+        if (firstQuoteIndex == -1 || secondQuoteIndex == -1) { // 2개 따옴표가 없는 경우
             System.out.println("테이블 이름을 찾을 수 없습니다.");
             return;
         }
         String tableName = input.substring(firstQuoteIndex + 1, secondQuoteIndex);
 
-        // 속성 추출
-        int openParenIndex = input.indexOf("(", secondQuoteIndex);
-        int closeParenIndex = input.lastIndexOf(")");
+        // 속성 추출 "(" --- ")" 괄호 사이의 문자열을 추출
+        int openParenIndex = input.indexOf("(", secondQuoteIndex); // 두번째 " 부터 ( 인덱스를 찾기
+        int closeParenIndex = input.lastIndexOf(")"); // ) 인덱스 찾기
         if (openParenIndex == -1 || closeParenIndex == -1) {
-            if(openParenIndex == -1){
-                System.out.println("오류: openParenIndex == -1");
-            }
-            if(closeParenIndex == -1 ){
-                System.out.println("오류: closeParenIndex == -1");
-            }
 
-            System.out.println("속성 목록을 찾을 수 없습니다.");
+            System.out.println("속성 목록을 찾을 수 없습니다. : 괄호 형식이 잘못 됨");
             return;
         }
-        String attributesStr = input.substring(openParenIndex + 1, closeParenIndex).trim();
+        String attributesStr = input.substring(openParenIndex + 1, closeParenIndex).trim(); // 띄어쓰기 제거
         if (attributesStr.isEmpty()) {
             System.out.println("속성 목록이 비어 있습니다.");
             return;
         }
 
-        String[] attributes = attributesStr.split(",");
+        String[] attributes = attributesStr.split(","); // , 단위 속성 추출 -> attributes[i] 에 저장
         for (int i = 0; i < attributes.length; i++) {
             attributes[i] = attributes[i].trim().replaceAll("`", ""); // 공백과 백틱(`) 제거
         }
 
         tableManager.createTable(tableName, attributes);
-        TableFileManager fileManager = new TableFileManager(tableName);
+        // TableFileManager fileManager = new TableFileManager(tableName);
         System.out.println("테이블과 관련된 데이터 파일이 성공적으로 생성되었습니다.");
-    }
+    }// handleCreateTable
 
 
 
@@ -183,7 +190,8 @@ public class Main {
         return recordData;
     }
 
-    private static void handleInsertRecord(String input, TableManager tableManager) {
+    private static void handleInsertRecord(String input, TableManager tableManager)
+    {
         String tableName = extractTableName(input);
         if (tableName == null) {
             System.out.println("테이블 이름 추출 실패.");
@@ -216,7 +224,7 @@ public class Main {
         } catch (IOException e) {
             System.err.println("레코드 삽입 중 오류 발생: " + e.getMessage());
         }
-    }
+    }//
 
 
 

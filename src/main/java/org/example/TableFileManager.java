@@ -48,7 +48,7 @@ public class TableFileManager {
     }
     private void initializeFile() {
         try (RandomAccessFile file = new RandomAccessFile(tableName, "rw")) {
-            if (file.length() == 0) {
+            if (file.length() == 0) { // 처음 초기화일 경우
                 file.writeInt(0); // 전체 레코드 수 초기화
                 file.writeInt(1); // 블록 수 초기화
                 file.writeInt(BLOCK_SIZE); // 블록 크기 저장
@@ -60,7 +60,8 @@ public class TableFileManager {
         }
     }
 
-    public void insertRecord(byte[] recordData) throws IOException {
+    public void insertRecord(byte[] recordData) throws IOException
+    {
         if (recordData.length != RECORD_SIZE) {
             throw new IllegalArgumentException("레코드 데이터는 " + RECORD_SIZE + "바이트여야 합니다.");
         }
@@ -105,7 +106,7 @@ public class TableFileManager {
                 file.write(block);
             }
         }
-    }
+    }//
 
     private boolean isRecordEmpty(byte[] block, int offset) {
         // 레코드가 비어 있는지

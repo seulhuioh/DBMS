@@ -58,8 +58,24 @@ public class TableManager {
                 e.printStackTrace();
             }
         }
-        System.out.println(tableName +"테이블 삽입 완료" );
-    }//create method
+        System.out.println(tableName +"테이블 삽입 완료");
+    }
+
+    // 새로 추가된 메소드
+    public boolean validateTableName(String tableName) {
+        try {
+            String sql = "SELECT 1 FROM Relational_MetaData WHERE relational_name = ?";
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, tableName);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    return rs.next();
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
     public boolean validateInsert(String tableName, String[] values) {
         try {
@@ -88,7 +104,4 @@ public class TableManager {
             return false;
         }
     }
-
-
-
 }
